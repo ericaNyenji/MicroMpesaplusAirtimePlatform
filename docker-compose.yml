@@ -1,0 +1,32 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: micrompesa-mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: micrompesa
+      MYSQL_USER: micrompesa_user
+      MYSQL_PASSWORD: micrompesa_pass
+      MYSQL_ROOT_PASSWORD: rootpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  app:
+    image: micrompesa
+    container_name: micrompesa-app
+    depends_on:
+      - mysql
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/micrompesa
+      SPRING_DATASOURCE_USERNAME: micrompesa_user
+      SPRING_DATASOURCE_PASSWORD: micrompesa_pass
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+
+volumes:
+  mysql_data:

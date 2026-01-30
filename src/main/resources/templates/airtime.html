@@ -1,0 +1,207 @@
+<!--(If you put it under static, Spring won’t render it via @Controller.)-->
+<!--<script>-->
+<!--    const token = sessionStorage.getItem("token");-->
+<!--    if (!token) {-->
+<!--        window.location.href = "/login";-->
+<!--    }-->
+<!--</script>-->
+
+<!--SPRING SECURITY HANDLES AUTH AUTOMATICALLY. Use Spring Security session to get the logged-in user-->
+<!-- HTML should be rendered by Thymeleaf properly. The pages should be served as Thymeleaf templates not plain HTML-->
+
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Buy Airtime</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!--    Spring Boot will serve style.css automatically.-->
+    <link rel="stylesheet" href="/css/style.css">
+
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<!--Expose CSRF token in HTML (Thymeleaf)-->
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+
+
+</head>
+<body>
+
+<div id="notif-toast-container"></div>
+
+<!-- Confirmation Modal for Airtime -->
+<div id="airtimeConfirmModal" class="modal">
+    <div class="modal-content">
+        <span class="close" onclick="closeAirtimeModal()">&times;</span>
+        <p id="airtimeConfirmText">Are you sure you want to purchase airtime worth KES 0?</p>
+        <div class="modal-buttons">
+            <button id="confirmYes" class="btn">Yes</button>
+            <button id="confirmNo" class="btn" onclick="closeAirtimeModal()">No</button>
+        </div>
+    </div>
+</div>
+
+<button class="dark-toggle" onclick="toggleDark()"> <i class="fa-solid fa-moon"></i> </button>
+
+
+<div style="position: absolute; top: 10px; right: 10px; text-align: center;">
+    <span class="hello-text" th:text="|Hello, ${firstName}|"
+          style="display:block; margin-bottom:6px; font-weight:bold;"></span>
+
+    <a href="/profile">
+        <i class="fa-solid fa-circle-user profile-icon"
+           style="font-size: 40px; cursor:pointer;"></i>
+    </a>
+</div>
+
+
+<div class="container">
+
+    <div class="wallet-card">
+        <h3>Wallet Balance</h3>
+        <div class="amount">KES <span id="balanceValue">0</span></div>
+        <div class="currency">Available Balance</div>
+    </div>
+
+
+    <h2>Buy Airtime</h2>
+    <div class="tile">
+        <h4>Airtime Balance</h4>
+        <div class="value"></div>
+    </div>
+<input type="number" id="amount" placeholder="Amount"><br><br>
+<button onclick="buyAirtime()">Buy Airtime</button>
+<div id="toast" class="toast"></div>
+
+<a href="/dashboard">⬅ Back to Dashboard</a>
+
+    <script>
+<!--        Read csrfToken in JavaScript-->
+        const csrfToken = document.querySelector('meta[name="_csrf"]').content;
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]').content;
+
+                function loadAirtimeBalance() {
+                    fetch("/api/v1/airtime/balance")
+                        .then(res => res.json())
+                        .then(balance => {
+                            document.querySelector(".tile .value").innerText = "KES " + balance;
+                        });
+                }
+
+let airtimeAmountToBuy = 0;
+
+<!--// Step 1: Open modal when user clicks Buy-->
+function buyAirtime() {
+    const amount = document.getElementById("amount").value;
+    if (!amount || amount <= 0) {
+        showToast("Enter a valid amount", true);
+        return;
+    }
+    airtimeAmountToBuy = amount;
+
+<!--    // Update modal text-->
+    document.getElementById("airtimeConfirmText").innerText =
+        `Are you sure you want to purchase airtime worth KES ${amount}?`;
+
+<!--    // Show modal-->
+    document.getElementById("airtimeConfirmModal").style.display = "block";
+}
+
+<!--// Step 2: Confirm purchase-->
+document.getElementById("confirmYes").onclick = function () {
+    document.getElementById("airtimeConfirmModal").style.display = "none";
+
+    fetch("/api/v1/airtime/buy", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            [csrfHeader]: csrfToken
+        },
+        body: JSON.stringify({ amount: airtimeAmountToBuy })
+    })
+    .then(async res => {
+        const msg = await res.text();
+        if (!res.ok) throw new Error(msg);
+        showToast(msg);
+        loadAirtimeBalance();
+        getBalance();
+        document.getElementById("amount").value = "";
+    })
+    .catch(err => showToast(err.message || "Airtime purchase failed", true));
+};
+
+<!--// Close modal function-->
+function closeAirtimeModal() {
+    document.getElementById("airtimeConfirmModal").style.display = "none";
+}
+
+<!--// Close modal if user clicks outside-->
+window.onclick = function(event) {
+    const modal = document.getElementById("airtimeConfirmModal");
+    if (event.target == modal) {
+        modal.style.display = "none";
+    }
+};
+
+
+
+
+
+
+    function getBalance() {
+    fetch("/api/v1/wallet/balance")
+    .then(res => res.json())
+    .then(balance => {
+    document.getElementById("balanceValue").innerText = balance;
+    })
+    .catch(() => showToast("Failed to load balance", true));
+
+    <!-- fetch("/api/v1/wallet/balance?phone=me")...Remove phone from frontend completely.My REST controller already uses session...Spring Security already knows who is logged in.-->
+    }
+
+  window.onload = () => {
+    loadAirtimeBalance();
+    getBalance();
+};
+
+
+    </script>
+
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>  <!-- define-SockJS -->
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script> <!--    define Stomp -->
+<script src="/js/app.js"></script> <!--loaded after DOM. Guarantees DOM exists-->
+</body>
+</html>
+
+
+<!--<!DOCTYPE html>-->
+<!--<html>-->
+<!--<head>-->
+<!--    <title>Buy Airtime</title>-->
+<!--</head>-->
+<!--<body>-->
+
+<!--<h2>Buy Airtime</h2>-->
+
+<!--<input type="number" id="amount" placeholder="Amount"><br><br>-->
+<!--<button onclick="buy()">Buy Airtime</button>-->
+
+<!--<p id="result"></p>-->
+
+<!--<a href="/dashboard">⬅ Back to Dashboard</a>-->
+
+<!--<script>-->
+<!--    const phone = sessionStorage.getItem("phone");-->
+<!--    if (!phone) window.location.href = "/login";-->
+
+<!--    function buy() {-->
+<!--        document.getElementById("result").innerText =-->
+<!--            "Airtime purchase API coming next";-->
+<!--    }-->
+<!--</script>-->
+
+<!--</body>-->
+<!--</html>-->

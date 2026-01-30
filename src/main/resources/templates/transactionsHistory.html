@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Transaction History</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/transactions.css">
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<!--We don’t need headers or CSRF for a GET. -->
+
+</head>
+<body>
+<div id="notif-toast-container"></div>
+<button class="dark-toggle" onclick="toggleDark()"> <i class="fa-solid fa-moon"></i> </button>
+
+<div class="container">
+    <a href="/dashboard" style="display:block; margin-top:20px;">⬅ Back to Dashboard</a>
+    <br> <br> <br>
+    <h2> 🧾 Transaction History</h2>
+
+    <table id="txTable">
+        <thead>
+        <tr>
+            <th>Date & Time</th>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Balance After</th>
+            <th>Note</th>
+        </tr>
+        </thead>
+        <tbody>
+        <!-- Transactions will be injected here by JS -->
+        </tbody>
+    </table>
+
+
+</div>
+<!--Do NOT expose userId to the browser. Instead, infer type without userId:-->
+<script>
+
+
+    // Helper function to format timestamp
+    function formatTimestamp(ts) {
+        const date = new Date(ts);
+        return date.toLocaleString(); // e.g., 1/21/2026, 2:45:30 PM
+    }
+
+const tbody = document.querySelector("#txTable tbody");
+
+fetch("/api/v1/transactions")
+  .then(res => res.json())
+  .then(transactions => {
+    transactions.forEach(tx => {
+    let type = "";
+    if (tx.senderId === null) type = "Deposit";
+    else if (tx.receiverId === null) type = "Airtime";
+    else if (tx.note.startsWith("You have received")) type = "Received";
+    else type = "Send";
+
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+        <td>${formatTimestamp(tx.timestamp)}</td>
+        <td class="${type.toLowerCase()}">${type}</td>
+        <td>KES ${tx.amount.toFixed(2)}</td>
+        <td>KES ${(tx.balanceAfter ?? 0).toFixed(2)}</td>
+        <td>${tx.note}</td>
+    `;
+    tbody.appendChild(tr);
+});
+
+  });
+
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>  <!-- define-SockJS -->
+<script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script> <!--    define Stomp -->
+<script src="/js/app.js"></script> <!--loaded after DOM. Guarantees DOM exists-->
+</body>
+</html>

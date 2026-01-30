@@ -1,0 +1,86 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f4f6f8;
+    padding: 20px;
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+h2 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+}
+
+th {
+    background-color: #1976d2;
+    color: white;
+}
+
+tr:hover {
+    background-color: #f1f1f1;
+}
+
+.deposit {
+    color: green;
+    font-weight: bold;
+}
+
+.send {
+    color: orange;
+    font-weight: bold;
+}
+
+.received {
+    color: #4caf50;
+    font-weight: bold;
+}
+
+
+.airtime {
+    color: purple;
+    font-weight: bold;
+}
+
+/* DARK MODE OVERRIDES */
+body.dark {
+    background: #121212;
+    color: #e0f2f1;
+}
+
+body.dark .container {
+    background: #1f1f1f;
+}
+
+body.dark table {
+    color: #e0f2f1;
+}
+
+body.dark th {
+    background-color: #2e7d32;
+}
+
+body.dark tr:hover {
+    background-color: #2a2a2a;
+}
+
+body.dark td {
+    border-bottom: 1px solid #333;
+}
