@@ -1,3 +1,5 @@
+// DARK MODE
+
 if (localStorage.getItem("dark") === "true") {
     document.body.classList.add("dark");
 }
@@ -10,9 +12,6 @@ if (document.body.classList.contains("dark")) {
     }
 }
 
-const notificationSound = new Audio("/sounds/message pop alert.mp3");
-
-
 function toggleDark() {
     document.body.classList.toggle("dark");
     const darkToggle = document.querySelector(".dark-toggle i");
@@ -20,21 +19,27 @@ function toggleDark() {
 
     localStorage.setItem("dark", isDark);
 
-    if (isDark) {
-        darkToggle.classList.remove("fa-moon");
-        darkToggle.classList.add("fa-sun");
-    } else {
-        darkToggle.classList.remove("fa-sun");
-        darkToggle.classList.add("fa-moon");
+    if (darkToggle) {
+        if (isDark) {
+            darkToggle.classList.remove("fa-moon");
+            darkToggle.classList.add("fa-sun");
+        } else {
+            darkToggle.classList.remove("fa-sun");
+            darkToggle.classList.add("fa-moon");
+        }
     }
 }
 
-function showToast(message, isError = false) {
-            const toast = document.getElementById("toast");
-            toast.innerText = message;
-            toast.className = "toast show" + (isError ? " error" : "");
+// TOAST
 
-            setTimeout(() => toast.classList.remove("show"), 3000);
+function showToast(message, isError = false) {
+    const toast = document.getElementById("toast");
+    if (!toast) return;
+
+    toast.innerText = message;
+    toast.className = "toast show" + (isError ? " error" : "");
+
+    setTimeout(() => toast.classList.remove("show"), 3000);
 }
 
 function showNotificationToast(message, isError = false) {
@@ -55,69 +60,91 @@ function showNotificationToast(message, isError = false) {
     }, 10000);
 }
 
+//  NOTIFICATION SOUND
+
+const notificationSound = new Audio("/sounds/message pop alert.mp3");
+
+// SEND MONEY MODAL
+
 const modal = document.getElementById("confirmModal");
 const confirmText = document.getElementById("confirmText");
 const confirmYes = document.getElementById("confirmYes");
 const confirmNo = document.getElementById("confirmNo");
 
 function closeModal() {
-    modal.style.display = "none";
+    if (modal) modal.style.display = "none";
 }
 
-window.onclick = function(event) {
+window.onclick = function (event) {
     if (event.target === modal) closeModal();
-}
+};
 
-document.getElementById("sendMoneyForm").addEventListener("submit", async e => {
-    e.preventDefault(); // stop default form submit
+// SEND MONEY FORM (SAFE)
 
-    const form = e.target;
-    const data = new FormData(form);
-    const receiverPhone = data.get("receiverPhone");
-    const amount = data.get("amount");
+const sendMoneyForm = document.getElementById("sendMoneyForm");
+if (sendMoneyForm) {
+    sendMoneyForm.addEventListener("submit", async e => {
+        e.preventDefault();
 
-    let fullName = "";
-    try {
-        const res = await fetch(`/api/v1/users/byPhone?phone=${encodeURIComponent(receiverPhone)}`);
-        if (res.ok) {
+        const form = e.target;
+        const data = new FormData(form);
+        const receiverPhone = data.get("receiverPhone");
+        const amount = data.get("amount");
+
+        let fullName = "";
+        try {
+            const res = await fetch(`/api/v1/users/byPhone?phone=${encodeURIComponent(receiverPhone)}`);
+            if (!res.ok) {
+                showToast("Receiver not found", true);
+                return;
+            }
             const receiver = await res.json();
             fullName = receiver.fullName;
-        } else {
-            showToast("Receiver not found", true);
+        } catch {
+            showToast("Failed to fetch receiver info", true);
             return;
         }
-    } catch {
-        showToast("Failed to fetch receiver info", true);
-        return;
-    }
 
-    confirmText.innerText = `Are you sure you want to send KES ${amount} to ${fullName} (${receiverPhone})?`;
-    modal.style.display = "block";
-
-    confirmYes.onclick = async () => {
-        modal.style.display = "none";
-
-        try {
-            const response = await fetch("/sendMoney", { method: "POST", body: data });
-            const msg = await response.text();
-            if (!response.ok) throw new Error(msg);
-            showToast(msg);
-            form.reset();
-            getBalance();
-        } catch (err) {
-            showToast(err.message, true);
+        if (confirmText && modal) {
+            confirmText.innerText =
+                `Are you sure you want to send KES ${amount} to ${fullName} (${receiverPhone})?`;
+            modal.style.display = "block";
         }
-    };
 
-    confirmNo.onclick = closeModal;
-});
+        if (confirmYes) {
+            confirmYes.onclick = async () => {
+                closeModal();
+                try {
+                    const response = await fetch("/sendMoney", {
+                        method: "POST",
+                        body: data
+                    });
+                    const msg = await response.text();
+                    if (!response.ok) throw new Error(msg);
+
+                    showToast(msg);
+                    form.reset();
+                    if (typeof getBalance === "function") getBalance();
+                } catch (err) {
+                    showToast(err.message, true);
+                }
+            };
+        }
+
+        if (confirmNo) {
+            confirmNo.onclick = closeModal;
+        }
+    });
+}
+
+// WEBSOCKET
 
 let stompClient = null;
 
 function connectSocket() {
     const socket = new SockJS("/ws");
     stompClient = Stomp.over(socket);
-    stompClient.debug = null; // silence logs
+    stompClient.debug = null;
 
     stompClient.connect({}, () => {
 
@@ -126,9 +153,7 @@ function connectSocket() {
 
             showNotificationToast(data.message);
 
-                notificationSound.play().catch(err => {
-                    console.warn("Notification sound could not play:", err);
-                });
+            notificationSound.play().catch(() => {});
 
             const bal = document.getElementById("balanceValue");
             if (bal && data.balance !== undefined) {
@@ -140,14 +165,18 @@ function connectSocket() {
     });
 }
 
+// NOTIFICATION BADGE
+
 function incrementNotifBadge() {
     const badge = document.getElementById("notifCount");
     if (!badge) return;
 
-    const current = parseInt(badge.innerText || "0");
+    const current = parseInt(badge.innerText || "0", 10);
     badge.innerText = current + 1;
     badge.style.display = "inline-block";
 }
+
+// INIT
 
 document.addEventListener("DOMContentLoaded", connectSocket);
 
